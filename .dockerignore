@@ -1,0 +1,22 @@
+# Rahasia: JANGAN sampai masuk ke image
+.env
+.env.*
+!.env.example
+
+# Dikerjakan di dalam image, bukan dari host
+vendor
+node_modules
+public/build
+public/hot
+
+# Tidak perlu di image
+.git
+.github
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+tests
+docker
+docker-compose.yml
+*.md

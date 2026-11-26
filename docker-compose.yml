@@ -1,0 +1,76 @@
+# Letakkan di ROOT project (sejajar dengan artisan & composer.json).
+# Variabel ${...} dibaca otomatis dari file .env di folder yang sama.
+
+services:
+  # --- Resepsionis: menerima request dari browser ---
+  nginx:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile
+      additional_contexts:
+        app: "service:app"     # build service "app" dulu, lalu ambil public/-nya
+    container_name: ruko-ina-nginx
+    restart: unless-stopped
+    ports:
+      - "8080:80"              # buka di http://IP-VPS:8080
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - app-storage:/var/www/html/storage:ro
+    depends_on:
+      - app
+
+  # --- Koki: Laravel (kode sudah ada di dalam image) ---
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    image: ruko-ina-app:latest
+    container_name: ruko-ina-app
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Asia/Jakarta
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # --- Pekerja latar belakang (QUEUE_CONNECTION=database) ---
+  queue:
+    image: ruko-ina-app:latest
+    container_name: ruko-ina-queue
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Asia/Jakarta
+    command: php artisan queue:work --tries=3 --sleep=3
+    volumes:
+      - app-storage:/var/www/html/storage
+    depends_on:
+      - app
+
+  # --- Gudang: MySQL ---
+  db:
+    image: mysql:8.0
+    container_name: ruko-ina-db
+    restart: unless-stopped
+    ports:
+      - "3311:3306"            # luar: 3311 -> dalam container: 3306
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_USER: ${DB_USERNAME}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      TZ: Asia/Jakarta
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  db-data:
+  app-storage:
