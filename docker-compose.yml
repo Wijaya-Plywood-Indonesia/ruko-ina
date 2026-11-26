@@ -39,6 +39,9 @@ services:
 
   # --- Pekerja latar belakang (QUEUE_CONNECTION=database) ---
   queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
     image: ruko-ina-app:latest
     container_name: ruko-ina-queue
     restart: unless-stopped
