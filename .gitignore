@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+docker/certbot/cloudflare.ini
+docker/certbot/*.ini
+!docker/certbot/*.ini.example
